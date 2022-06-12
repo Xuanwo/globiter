@@ -89,6 +89,16 @@ mod tests {
                     Token::new_plain("/file"),
                 ],
             ),
+            (
+                "two set",
+                "https://example.com/{a,b,c}/file/{x,y,z}",
+                vec![
+                    Token::new_plain("https://example.com/"),
+                    Token::new_set(vec!["a".to_string(), "b".to_string(), "c".to_string()]),
+                    Token::new_plain("/file/"),
+                    Token::new_set(vec!["x".to_string(), "y".to_string(), "z".to_string()]),
+                ],
+            ),
         ];
 
         for (name, input, expected) in cases {

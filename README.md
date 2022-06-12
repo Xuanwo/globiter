@@ -1,21 +1,13 @@
-# formwork &emsp; [![Build Status]][actions] [![Latest Version]][crates.io]
+# globiter &emsp; [![Build Status]][actions] [![Latest Version]][crates.io]
 
-[Build Status]: https://img.shields.io/github/workflow/status/Xuanwo/formwork/CI/main
-[actions]: https://github.com/Xuanwo/formwork/actions?query=branch%3Amain
-[Latest Version]: https://img.shields.io/crates/v/formwork.svg
-[crates.io]: https://crates.io/crates/formwork
+[Build Status]: https://img.shields.io/github/workflow/status/Xuanwo/globiter/CI/main
+[actions]: https://github.com/Xuanwo/globiter/actions?query=branch%3Amain
+[Latest Version]: https://img.shields.io/crates/v/globiter.svg
+[crates.io]: https://crates.io/crates/globiter
 
-`formwork` is my favourite rust template.
-
-> Please replace with valid value.
+`globiter` turns glob range and set into Iterator.
 
 ## Quick Start
-
-Replace all placeholder with valid values, for example:
-
-- `Xuanwo` => github login
-- `github@xuanwo.io` => email
-- `formwork` => crate name
 
 ```rust
 // Replace with quick Start here
@@ -27,7 +19,7 @@ Check out the [CONTRIBUTING.md](./CONTRIBUTING.md) guide for more details on get
 
 ## Getting help
 
-Submit [issues](https://github.com/Xuanwo/formwork/issues/new/choose) for bug report or asking questions in [discussion](https://github.com/Xuanwo/formwork/discussions/new?category=q-a).
+Submit [issues](https://github.com/Xuanwo/globiter/issues/new/choose) for bug report or asking questions in [discussion](https://github.com/Xuanwo/globiter/discussions/new?category=q-a).
 
 #### License
 

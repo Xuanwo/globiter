@@ -2,11 +2,11 @@
 authors = ["Xuanwo <github@xuanwo.io>>"]
 categories = ["command-line-utilities"]
 description = "Replace with description"
-documentation = "https://docs.rs/formwork"
-repository = "https://github.com/Xuanwo/formwork"
+documentation = "https://docs.rs/globiter"
+repository = "https://github.com/Xuanwo/globiter"
 edition = "2021"
 license = "Apache-2.0"
-name = "formwork"
-version = "0.0.1"
+name = "globiter"
+version = "0.0.0"
 
 [dependencies]

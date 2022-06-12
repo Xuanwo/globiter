@@ -21,6 +21,7 @@ impl Token {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum TokenIter<'a> {
     Plain(&'a String, bool),
     Set(Iter<'a, String>),

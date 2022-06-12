@@ -1,7 +1,9 @@
-use crate::token::Token;
 use anyhow::Result;
+use itertools::Itertools;
 use std::mem::take;
 use std::str::FromStr;
+
+use super::token::Token;
 
 #[derive(Debug, Clone)]
 pub struct Pattern {
@@ -58,6 +60,18 @@ impl Pattern {
 
         Ok(pattern)
     }
+
+    pub fn as_str(&self) -> &str {
+        &self.original
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = String> + '_ {
+        self.tokens
+            .iter()
+            .map(|v| v.iter())
+            .multi_cartesian_product()
+            .map(|v| v.join(""))
+    }
 }
 
 impl FromStr for Pattern {
@@ -106,6 +120,50 @@ mod tests {
 
             assert_eq!(p.original, input, "case {name}");
             assert_eq!(p.tokens, expected, "case {name}");
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_iter() -> Result<()> {
+        let cases = vec![
+            ("normal", "Hello, World!", vec!["Hello, World!"]),
+            (
+                "one set",
+                "https://example.com/{a,b,c}/file",
+                vec![
+                    "https://example.com/a/file",
+                    "https://example.com/b/file",
+                    "https://example.com/c/file",
+                ],
+            ),
+            (
+                "two set",
+                "https://example.com/{a,b,c}/file/{x,y,z}",
+                vec![
+                    "https://example.com/a/file/x",
+                    "https://example.com/a/file/y",
+                    "https://example.com/a/file/z",
+                    "https://example.com/b/file/x",
+                    "https://example.com/b/file/y",
+                    "https://example.com/b/file/z",
+                    "https://example.com/c/file/x",
+                    "https://example.com/c/file/y",
+                    "https://example.com/c/file/z",
+                ],
+            ),
+        ];
+
+        for (name, input, expected) in cases {
+            let expected = expected
+                .into_iter()
+                .map(|v| v.to_string())
+                .collect::<Vec<_>>();
+
+            let p = Pattern::parse(input)?;
+
+            assert_eq!(p.iter().collect::<Vec<_>>(), expected, "case {name}");
         }
 
         Ok(())

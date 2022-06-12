@@ -11,3 +11,4 @@ version = "0.0.0"
 
 [dependencies]
 anyhow = "1.0.57"
+itertools = "0.10.3"

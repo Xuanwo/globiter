@@ -73,28 +73,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_plain() -> Result<()> {
-        let p = Pattern::parse("Hello, World!")?;
+    fn test_parse() -> Result<()> {
+        let cases = vec![
+            (
+                "normal",
+                "Hello, World!",
+                vec![Token::new_plain("Hello, World!")],
+            ),
+            (
+                "one set",
+                "https://example.com/{a,b,c}/file",
+                vec![
+                    Token::new_plain("https://example.com/"),
+                    Token::new_set(vec!["a".to_string(), "b".to_string(), "c".to_string()]),
+                    Token::new_plain("/file"),
+                ],
+            ),
+        ];
 
-        assert_eq!(p.original, "Hello, World!");
-        assert_eq!(p.tokens, vec![Token::new_plain("Hello, World!")]);
+        for (name, input, expected) in cases {
+            let p = Pattern::parse(input)?;
 
-        Ok(())
-    }
-
-    #[test]
-    fn test_parse_set() -> Result<()> {
-        let p = Pattern::parse("https://example.com/{a,b,c}/file")?;
-
-        assert_eq!(p.original, "https://example.com/{a,b,c}/file");
-        assert_eq!(
-            p.tokens,
-            vec![
-                Token::new_plain("https://example.com/"),
-                Token::new_set(vec!["a".to_string(), "b".to_string(), "c".to_string()]),
-                Token::new_plain("/file"),
-            ]
-        );
+            assert_eq!(p.original, input, "case {name}");
+            assert_eq!(p.tokens, expected, "case {name}");
+        }
 
         Ok(())
     }

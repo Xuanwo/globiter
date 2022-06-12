@@ -1,5 +1,6 @@
 use std::slice::Iter;
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Plain(String),
     Set(Vec<String>),
@@ -7,12 +8,12 @@ pub enum Token {
 }
 
 impl Token {
-    pub fn new_plain(s: &str) -> Token {
-        Token::Plain(s.to_string())
+    pub fn new_plain(s: impl Into<String>) -> Token {
+        Token::Plain(s.into())
     }
 
-    pub fn new_set<'a>(s: impl Iterator<Item = &'a str>) -> Token {
-        Token::Set(s.map(|v| v.to_string()).collect())
+    pub fn new_set(s: impl Into<Vec<String>>) -> Token {
+        Token::Set(s.into())
     }
 
     pub fn iter(&self) -> TokenIter<'_> {
@@ -66,7 +67,7 @@ mod tests {
             ),
             (
                 "set",
-                Token::new_set(["a", "b", "c", "d", "e"].into_iter()),
+                Token::new_set(["a", "b", "c", "d", "e"].map(|v| v.to_string()).to_vec()),
                 vec!["a", "b", "c", "d", "e"],
             ),
         ];

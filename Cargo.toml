@@ -10,3 +10,4 @@ name = "globiter"
 version = "0.0.0"
 
 [dependencies]
+anyhow = "1.0.57"

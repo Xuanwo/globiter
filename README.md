@@ -10,7 +10,16 @@
 ## Quick Start
 
 ```rust
-// Replace with quick Start here
+let pattern = Pattern::parse("https://example.com/{a,b,c}/file/{x,y,z}")?;
+for i in pattern.iter() {
+    println("{i}")
+}
+// Output:
+// https://example.com/a/file/x
+// https://example.com/a/file/y
+// https://example.com/a/file/z
+// ...
+// https://example.com/c/file/z
 ```
 
 ## Contributing

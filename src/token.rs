@@ -23,14 +23,14 @@ impl Token {
 
 #[derive(Debug, Clone)]
 pub enum TokenIter<'a> {
-    Plain(&'a String, bool),
+    Plain(Option<&'a str>),
     Set(Iter<'a, String>),
 }
 
 impl<'a> TokenIter<'a> {
     pub fn new(t: &'a Token) -> Self {
         match t {
-            Token::Plain(v) => TokenIter::Plain(v, false),
+            Token::Plain(v) => TokenIter::Plain(Some(v)),
             Token::Set(v) => TokenIter::Set(v.iter()),
         }
     }
@@ -41,14 +41,7 @@ impl<'a> Iterator for TokenIter<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            TokenIter::Plain(v, used) => {
-                if *used {
-                    None
-                } else {
-                    *used = true;
-                    Some(v)
-                }
-            }
+            TokenIter::Plain(v) => v.take(),
             TokenIter::Set(v) => v.next().map(|v| v.as_str()),
         }
     }

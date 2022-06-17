@@ -39,15 +39,13 @@ impl Pattern {
                         State::InSet(v) => take(v),
                     };
                     state = State::Plain;
-                    let s = take(&mut buf);
-                    set.push(s);
+                    set.push(take(&mut buf).trim().to_string());
                     pattern.tokens.push(Token::new_set(set))
                 }
                 ',' => match &mut state {
                     State::Plain => buf.push(','),
-                    State::InSet(v) => {
-                        let s = take(&mut buf);
-                        v.push(s);
+                    State::InSet(set) => {
+                        set.push(take(&mut buf).trim().to_string());
                     }
                 },
                 v => buf.push(v),
@@ -111,6 +109,16 @@ mod tests {
                     Token::new_set(vec!["a".to_string(), "b".to_string(), "c".to_string()]),
                     Token::new_plain("/file/"),
                     Token::new_set(vec!["x".to_string(), "y".to_string(), "z".to_string()]),
+                ],
+            ),
+            (
+                "two set with spaces",
+                "https://example.com/{a, b , c }/file/{foo bar, fizzbuzz}",
+                vec![
+                    Token::new_plain("https://example.com/"),
+                    Token::new_set(vec!["a".to_string(), "b".to_string(), "c".to_string()]),
+                    Token::new_plain("/file/"),
+                    Token::new_set(vec!["foo bar".to_string(), "fizzbuzz".to_string()]),
                 ],
             ),
         ];

@@ -1,18 +1,18 @@
 use std::slice::Iter;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Token {
-    Plain(String),
-    Set(Vec<String>),
+pub enum Token<'a> {
+    Plain(&'a str),
+    Set(Vec<&'a str>),
     // Range(String, String),
 }
 
-impl Token {
-    pub fn new_plain(s: impl Into<String>) -> Token {
+impl<'a> Token<'_> {
+    pub fn new_plain(s: impl Into<&'a str>) -> Token<'a> {
         Token::Plain(s.into())
     }
 
-    pub fn new_set(s: impl Into<Vec<String>>) -> Token {
+    pub fn new_set(s: impl Into<Vec<&'a str>>) -> Token<'a> {
         Token::Set(s.into())
     }
 
@@ -24,7 +24,7 @@ impl Token {
 #[derive(Debug, Clone)]
 pub enum TokenIter<'a> {
     Plain(Option<&'a str>),
-    Set(Iter<'a, String>),
+    Set(Iter<'a, &'a str>),
 }
 
 impl<'a> TokenIter<'a> {
@@ -42,7 +42,7 @@ impl<'a> Iterator for TokenIter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             TokenIter::Plain(v) => v.take(),
-            TokenIter::Set(v) => v.next().map(|v| v.as_str()),
+            TokenIter::Set(v) => v.next().copied(),
         }
     }
 }
@@ -61,7 +61,7 @@ mod tests {
             ),
             (
                 "set",
-                Token::new_set(["a", "b", "c", "d", "e"].map(|v| v.to_string()).to_vec()),
+                Token::new_set(["a", "b", "c", "d", "e"]),
                 vec!["a", "b", "c", "d", "e"],
             ),
         ];

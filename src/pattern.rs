@@ -1,37 +1,36 @@
 use anyhow::Result;
 use itertools::Itertools;
 use std::mem::take;
-use std::str::FromStr;
 
 use super::token::Token;
 
 #[derive(Debug, Clone)]
-pub struct Pattern {
-    original: String,
-    tokens: Vec<Token>,
+pub struct Pattern<'a> {
+    original: &'a str,
+    tokens: Vec<Token<'a>>,
 }
 
 #[derive(PartialEq)]
-enum State {
+enum State<'a> {
     Plain,
-    InSet(Vec<String>),
+    InSet(Vec<&'a str>),
 }
 
-impl Pattern {
+impl<'a> Pattern<'a> {
     pub fn parse(s: &str) -> Result<Pattern> {
         let mut pattern = Pattern {
-            original: s.to_string(),
+            original: s,
             tokens: Vec::new(),
         };
         let mut state = State::Plain;
-        let mut buf = String::new();
-        for char in s.chars() {
+        let (mut start, mut end) = (0, 0);
+        for (idx, char) in s.chars().enumerate() {
             match char {
                 '{' => {
                     debug_assert!(state == State::Plain);
                     state = State::InSet(Vec::new());
-                    let s = take(&mut buf);
-                    pattern.tokens.push(Token::new_plain(s))
+                    pattern.tokens.push(Token::new_plain(&s[start..end]));
+                    (start, end) = (idx + 1, idx + 1);
                 }
                 '}' => {
                     let mut set = match &mut state {
@@ -39,28 +38,29 @@ impl Pattern {
                         State::InSet(v) => take(v),
                     };
                     state = State::Plain;
-                    set.push(take(&mut buf).trim().to_string());
-                    pattern.tokens.push(Token::new_set(set))
+                    set.push((&s[start..end]).trim());
+                    pattern.tokens.push(Token::new_set(set));
+                    (start, end) = (idx + 1, idx + 1);
                 }
                 ',' => match &mut state {
-                    State::Plain => buf.push(','),
+                    State::Plain => end = idx + 1,
                     State::InSet(set) => {
-                        set.push(take(&mut buf).trim().to_string());
+                        set.push((&s[start..end]).trim());
+                        (start, end) = (idx + 1, idx + 1);
                     }
                 },
-                v => buf.push(v),
+                _ => end = idx + 1,
             }
         }
-        if !buf.is_empty() {
-            let s = take(&mut buf);
-            pattern.tokens.push(Token::Plain(s))
+        if end > start {
+            pattern.tokens.push(Token::Plain((&s[start..end]).trim()));
         }
 
         Ok(pattern)
     }
 
     pub fn as_str(&self) -> &str {
-        &self.original
+        self.original
     }
 
     pub fn iter(&self) -> impl Iterator<Item = String> + '_ {
@@ -72,10 +72,10 @@ impl Pattern {
     }
 }
 
-impl FromStr for Pattern {
-    type Err = anyhow::Error;
+impl<'a> TryFrom<&'a str> for Pattern<'a> {
+    type Error = anyhow::Error;
 
-    fn from_str(s: &str) -> Result<Self> {
+    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
         Pattern::parse(s)
     }
 }
@@ -97,7 +97,7 @@ mod tests {
                 "https://example.com/{a,b,c}/file",
                 vec![
                     Token::new_plain("https://example.com/"),
-                    Token::new_set(vec!["a".to_string(), "b".to_string(), "c".to_string()]),
+                    Token::new_set(vec!["a", "b", "c"]),
                     Token::new_plain("/file"),
                 ],
             ),
@@ -106,9 +106,9 @@ mod tests {
                 "https://example.com/{a,b,c}/file/{x,y,z}",
                 vec![
                     Token::new_plain("https://example.com/"),
-                    Token::new_set(vec!["a".to_string(), "b".to_string(), "c".to_string()]),
+                    Token::new_set(vec!["a", "b", "c"]),
                     Token::new_plain("/file/"),
-                    Token::new_set(vec!["x".to_string(), "y".to_string(), "z".to_string()]),
+                    Token::new_set(vec!["x", "y", "z"]),
                 ],
             ),
             (
@@ -116,9 +116,9 @@ mod tests {
                 "https://example.com/{a, b , c }/file/{foo bar, fizzbuzz}",
                 vec![
                     Token::new_plain("https://example.com/"),
-                    Token::new_set(vec!["a".to_string(), "b".to_string(), "c".to_string()]),
+                    Token::new_set(vec!["a", "b", "c"]),
                     Token::new_plain("/file/"),
-                    Token::new_set(vec!["foo bar".to_string(), "fizzbuzz".to_string()]),
+                    Token::new_set(vec!["foo bar", "fizzbuzz"]),
                 ],
             ),
         ];
@@ -164,11 +164,6 @@ mod tests {
         ];
 
         for (name, input, expected) in cases {
-            let expected = expected
-                .into_iter()
-                .map(|v| v.to_string())
-                .collect::<Vec<_>>();
-
             let p = Pattern::parse(input)?;
 
             assert_eq!(p.iter().collect::<Vec<_>>(), expected, "case {name}");

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use itertools::Itertools;
 use std::mem::take;
 
@@ -27,22 +27,24 @@ impl<'a> Pattern<'a> {
         for (idx, char) in s.char_indices() {
             let next_idx = idx + char.len_utf8();
             match char {
-                '{' => {
-                    debug_assert!(state == State::Plain);
-                    state = State::InSet(Vec::new());
-                    pattern.tokens.push(Token::new_plain(&s[start..end]));
-                    (start, end) = (next_idx, next_idx);
-                }
-                '}' => {
-                    let mut set = match &mut state {
-                        State::Plain => panic!("unreachable"),
-                        State::InSet(v) => take(v),
-                    };
-                    state = State::Plain;
-                    set.push((&s[start..end]).trim());
-                    pattern.tokens.push(Token::new_set(set));
-                    (start, end) = (next_idx, next_idx);
-                }
+                '{' => match &mut state {
+                    State::Plain => {
+                        state = State::InSet(Vec::new());
+                        pattern.tokens.push(Token::new_plain(&s[start..end]));
+                        (start, end) = (next_idx, next_idx);
+                    }
+                    State::InSet(_) => bail!("unexpected character '{{' at pos {}", idx),
+                },
+                '}' => match &mut state {
+                    State::InSet(v) => {
+                        let mut set = take(v);
+                        state = State::Plain;
+                        set.push((&s[start..end]).trim());
+                        pattern.tokens.push(Token::new_set(set));
+                        (start, end) = (next_idx, next_idx);
+                    }
+                    State::Plain => bail!("unexpected character '}}' at pos {}", idx),
+                },
                 ',' => match &mut state {
                     State::Plain => end = next_idx,
                     State::InSet(set) => {
@@ -129,6 +131,32 @@ mod tests {
 
             assert_eq!(p.original, input, "case {name}");
             assert_eq!(p.tokens, expected, "case {name}");
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_error() -> Result<()> {
+        let cases = vec![
+            (
+                "bad pattern 1",
+                "/{{a, b}",
+                "unexpected character '{' at pos 2",
+            ),
+            (
+                "bad pattern 2",
+                "/{a}}",
+                "unexpected character '}' at pos 4",
+            ),
+        ];
+
+        for (name, input, expected) in cases {
+            assert_eq!(
+                Pattern::parse(input).unwrap_err().to_string(),
+                expected,
+                "case {name}"
+            )
         }
 
         Ok(())

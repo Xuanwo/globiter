@@ -24,13 +24,14 @@ impl<'a> Pattern<'a> {
         };
         let mut state = State::Plain;
         let (mut start, mut end) = (0, 0);
-        for (idx, char) in s.chars().enumerate() {
+        for (idx, char) in s.char_indices() {
+            let next_idx = idx + char.len_utf8();
             match char {
                 '{' => {
                     debug_assert!(state == State::Plain);
                     state = State::InSet(Vec::new());
                     pattern.tokens.push(Token::new_plain(&s[start..end]));
-                    (start, end) = (idx + 1, idx + 1);
+                    (start, end) = (next_idx, next_idx);
                 }
                 '}' => {
                     let mut set = match &mut state {
@@ -40,16 +41,16 @@ impl<'a> Pattern<'a> {
                     state = State::Plain;
                     set.push((&s[start..end]).trim());
                     pattern.tokens.push(Token::new_set(set));
-                    (start, end) = (idx + 1, idx + 1);
+                    (start, end) = (next_idx, next_idx);
                 }
                 ',' => match &mut state {
-                    State::Plain => end = idx + 1,
+                    State::Plain => end = next_idx,
                     State::InSet(set) => {
                         set.push((&s[start..end]).trim());
-                        (start, end) = (idx + 1, idx + 1);
+                        (start, end) = (next_idx, next_idx);
                     }
                 },
-                _ => end = idx + 1,
+                _ => end = next_idx,
             }
         }
         if end > start {
@@ -113,12 +114,12 @@ mod tests {
             ),
             (
                 "two set with spaces",
-                "https://example.com/{a, b , c }/file/{foo bar, fizzbuzz}",
+                "https://example.com/{a, b , c }/file/{foo bar, 你好, fizzbuzz, 世界}",
                 vec![
                     Token::new_plain("https://example.com/"),
                     Token::new_set(vec!["a", "b", "c"]),
                     Token::new_plain("/file/"),
-                    Token::new_set(vec!["foo bar", "fizzbuzz"]),
+                    Token::new_set(vec!["foo bar", "你好", "fizzbuzz", "世界"]),
                 ],
             ),
         ];

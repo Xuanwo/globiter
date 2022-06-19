@@ -1,10 +1,10 @@
-use std::slice::Iter;
+use std::{borrow::Cow, ops::RangeInclusive, slice::Iter};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token<'a> {
     Plain(&'a str),
     Set(Vec<&'a str>),
-    // Range(String, String),
+    NumRange(usize, usize, usize),
 }
 
 impl<'a> Token<'_> {
@@ -16,6 +16,10 @@ impl<'a> Token<'_> {
         Token::Set(s.into())
     }
 
+    pub fn new_num_range(start: usize, end: usize, padding: usize) -> Token<'a> {
+        Token::NumRange(start, end, padding)
+    }
+
     pub fn iter(&self) -> TokenIter<'_> {
         TokenIter::new(self)
     }
@@ -25,6 +29,7 @@ impl<'a> Token<'_> {
 pub enum TokenIter<'a> {
     Plain(Option<&'a str>),
     Set(Iter<'a, &'a str>),
+    NumRange(RangeInclusive<usize>, usize /* padding width */),
 }
 
 impl<'a> TokenIter<'a> {
@@ -32,17 +37,21 @@ impl<'a> TokenIter<'a> {
         match t {
             Token::Plain(v) => TokenIter::Plain(Some(v)),
             Token::Set(v) => TokenIter::Set(v.iter()),
+            &Token::NumRange(start, end, padding) => TokenIter::NumRange(start..=end, padding),
         }
     }
 }
 
 impl<'a> Iterator for TokenIter<'a> {
-    type Item = &'a str;
+    type Item = Cow<'a, str>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            TokenIter::Plain(v) => v.take(),
-            TokenIter::Set(v) => v.next().copied(),
+            TokenIter::Plain(v) => v.take().map(|v| v.into()),
+            TokenIter::Set(v) => v.next().map(|&v| v.into()),
+            TokenIter::NumRange(range, padding) => {
+                range.next().map(|x| Cow::Owned(format!("{:0padding$}", x)))
+            }
         }
     }
 }
@@ -64,10 +73,20 @@ mod tests {
                 Token::new_set(["a", "b", "c", "d", "e"]),
                 vec!["a", "b", "c", "d", "e"],
             ),
+            (
+                "number range",
+                Token::new_num_range(1, 3, 0),
+                vec!["1", "2", "3"],
+            ),
+            (
+                "number range with padding",
+                Token::new_num_range(1, 3, 3),
+                vec!["001", "002", "003"],
+            ),
         ];
 
         for (name, input, expected) in cases {
-            let actual = input.iter().collect::<Vec<&str>>();
+            let actual = input.iter().collect::<Vec<_>>();
 
             assert_eq!(actual, expected, "case {name}")
         }

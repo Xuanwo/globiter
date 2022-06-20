@@ -1,5 +1,5 @@
 [package]
-authors = ["Xuanwo <github@xuanwo.io>>"]
+authors = ["Xuanwo <github@xuanwo.io>", "wfxr <wenxuangm@gmail.com>"]
 categories = ["command-line-utilities"]
 description = "Replace with description"
 documentation = "https://docs.rs/globiter"
@@ -7,7 +7,7 @@ repository = "https://github.com/Xuanwo/globiter"
 edition = "2021"
 license = "Apache-2.0"
 name = "globiter"
-version = "0.0.0"
+version = "0.1.0"
 
 [dependencies]
 anyhow = "1.0.57"

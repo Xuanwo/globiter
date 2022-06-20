@@ -54,11 +54,18 @@ impl<'a> Pattern<'a> {
                 ']' => match &mut state {
                     State::InRange(start) => {
                         let end = &s[i..j].trim();
-                        let padding = start.len().min(end.len());
-                        let (start, end) = (start.parse()?, end.parse()?);
-                        pattern
-                            .tokens
-                            .push(Token::new_num_range(start, end, padding));
+                        let token = match (start.chars().next(), end.chars().next()) {
+                            (Some('A'..='Z' | 'a'..='z'), Some('A'..='Z' | 'a'..='z')) => {
+                                Token::new_str_range(start, end)?
+                            }
+                            (Some('0'..='9'), Some('0'..='9')) => {
+                                let padding = start.len().min(end.len());
+                                let (start, end) = (start.parse()?, end.parse()?);
+                                Token::new_num_range(start, end, padding)
+                            }
+                            _ => bail!("invalid characters in range token before pos {}", idx),
+                        };
+                        pattern.tokens.push(token);
                         (i, j, state) = (next_idx, next_idx, State::Plain);
                     }
                     _ => bail!("unexpected character ']' at pos {}", idx),
@@ -244,6 +251,26 @@ mod tests {
                     "https://example.com/2/file/099",
                     "https://example.com/2/file/100",
                     "https://example.com/2/file/101",
+                ],
+            ),
+            (
+                "single letter range",
+                "https://example.com/[A-C]/file",
+                vec![
+                    "https://example.com/A/file",
+                    "https://example.com/B/file",
+                    "https://example.com/C/file",
+                ],
+            ),
+            (
+                "multi letters range",
+                "https://example.com/[ay-bc]/file",
+                vec![
+                    "https://example.com/ay/file",
+                    "https://example.com/az/file",
+                    "https://example.com/ba/file",
+                    "https://example.com/bb/file",
+                    "https://example.com/bc/file",
                 ],
             ),
         ];

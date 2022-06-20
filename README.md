@@ -10,16 +10,17 @@
 ## Quick Start
 
 ```rust
-let pattern = Pattern::parse("https://example.com/{a,b,c}/file/{x,y,z}")?;
+let pattern = Pattern::parse("https://example.com/{a,b,c}/file/[001-003]")?;
 for i in pattern.iter() {
     println("{i}")
 }
 // Output:
-// https://example.com/a/file/x
-// https://example.com/a/file/y
-// https://example.com/a/file/z
+// https://example.com/a/file/001
+// https://example.com/a/file/002
+// https://example.com/a/file/003
+// https://example.com/b/file/001
 // ...
-// https://example.com/c/file/z
+// https://example.com/c/file/003
 ```
 
 ## Contributing

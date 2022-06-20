@@ -14,6 +14,7 @@ pub struct Pattern<'a> {
 enum State<'a> {
     Plain,
     InSet(Vec<&'a str>),
+    InRange(&'a str),
 }
 
 impl<'a> Pattern<'a> {
@@ -23,40 +24,72 @@ impl<'a> Pattern<'a> {
             tokens: Vec::new(),
         };
         let mut state = State::Plain;
-        let (mut start, mut end) = (0, 0);
+        let (mut i, mut j) = (0, 0); // segment start & end index in s
         for (idx, char) in s.char_indices() {
             let next_idx = idx + char.len_utf8();
             match char {
                 '{' => match &mut state {
                     State::Plain => {
-                        state = State::InSet(Vec::new());
-                        pattern.tokens.push(Token::new_plain(&s[start..end]));
-                        (start, end) = (next_idx, next_idx);
+                        pattern.tokens.push(Token::new_plain(&s[i..j]));
+                        (i, j, state) = (next_idx, next_idx, State::InSet(Vec::new()));
                     }
-                    State::InSet(_) => bail!("unexpected character '{{' at pos {}", idx),
+                    _ => bail!("unexpected character '{{' at pos {}", idx),
+                },
+                '[' => match &mut state {
+                    State::Plain => {
+                        pattern.tokens.push(Token::new_plain(&s[i..j]));
+                        (i, j, state) = (next_idx, next_idx, State::InRange(""));
+                    }
+                    _ => bail!("unexpected character '[' at pos {}", idx),
                 },
                 '}' => match &mut state {
                     State::InSet(v) => {
                         let mut set = take(v);
-                        state = State::Plain;
-                        set.push((&s[start..end]).trim());
+                        set.push((&s[i..j]).trim());
                         pattern.tokens.push(Token::new_set(set));
-                        (start, end) = (next_idx, next_idx);
+                        (i, j, state) = (next_idx, next_idx, State::Plain);
                     }
-                    State::Plain => bail!("unexpected character '}}' at pos {}", idx),
+                    _ => bail!("unexpected character '}}' at pos {}", idx),
+                },
+                ']' => match &mut state {
+                    State::InRange(start) => {
+                        let end = &s[i..j].trim();
+                        let token = match (start.chars().next(), end.chars().next()) {
+                            (Some('A'..='Z' | 'a'..='z'), Some('A'..='Z' | 'a'..='z')) => {
+                                Token::new_str_range(start, end)?
+                            }
+                            (Some('0'..='9'), Some('0'..='9')) => {
+                                let padding = start.len().min(end.len());
+                                let (start, end) = (start.parse()?, end.parse()?);
+                                Token::new_num_range(start, end, padding)
+                            }
+                            _ => bail!("invalid characters in range token before pos {}", idx),
+                        };
+                        pattern.tokens.push(token);
+                        (i, j, state) = (next_idx, next_idx, State::Plain);
+                    }
+                    _ => bail!("unexpected character ']' at pos {}", idx),
                 },
                 ',' => match &mut state {
-                    State::Plain => end = next_idx,
+                    State::Plain => j = next_idx,
                     State::InSet(set) => {
-                        set.push((&s[start..end]).trim());
-                        (start, end) = (next_idx, next_idx);
+                        set.push((&s[i..j]).trim());
+                        (i, j) = (next_idx, next_idx);
+                    }
+                    _ => bail!("unexpected character ',' at pos {}", idx),
+                },
+                '-' => match &mut state {
+                    State::Plain | State::InSet(_) => j = next_idx,
+                    State::InRange(start) => {
+                        *start = s[i..j].trim();
+                        (i, j) = (next_idx, next_idx);
                     }
                 },
-                _ => end = next_idx,
+                _ => j = next_idx,
             }
         }
-        if end > start {
-            pattern.tokens.push(Token::Plain((&s[start..end]).trim()));
+        if j > i {
+            pattern.tokens.push(Token::Plain((&s[i..j]).trim()));
         }
 
         Ok(pattern)
@@ -124,6 +157,15 @@ mod tests {
                     Token::new_set(vec!["foo bar", "你好", "fizzbuzz", "世界"]),
                 ],
             ),
+            (
+                "one number range",
+                "https://example.com/[080-120]/file",
+                vec![
+                    Token::new_plain("https://example.com/"),
+                    Token::new_num_range(80, 120, 3),
+                    Token::new_plain("/file"),
+                ],
+            ),
         ];
 
         for (name, input, expected) in cases {
@@ -188,6 +230,47 @@ mod tests {
                     "https://example.com/c/file/x",
                     "https://example.com/c/file/y",
                     "https://example.com/c/file/z",
+                ],
+            ),
+            (
+                "one number range",
+                "https://example.com/[1-3]/file",
+                vec![
+                    "https://example.com/1/file",
+                    "https://example.com/2/file",
+                    "https://example.com/3/file",
+                ],
+            ),
+            (
+                "two number range with padding zero",
+                "https://example.com/[1-2]/file/[099-101]",
+                vec![
+                    "https://example.com/1/file/099",
+                    "https://example.com/1/file/100",
+                    "https://example.com/1/file/101",
+                    "https://example.com/2/file/099",
+                    "https://example.com/2/file/100",
+                    "https://example.com/2/file/101",
+                ],
+            ),
+            (
+                "single letter range",
+                "https://example.com/[A-C]/file",
+                vec![
+                    "https://example.com/A/file",
+                    "https://example.com/B/file",
+                    "https://example.com/C/file",
+                ],
+            ),
+            (
+                "multi letters range",
+                "https://example.com/[ay-bc]/file",
+                vec![
+                    "https://example.com/ay/file",
+                    "https://example.com/az/file",
+                    "https://example.com/ba/file",
+                    "https://example.com/bb/file",
+                    "https://example.com/bc/file",
                 ],
             ),
         ];

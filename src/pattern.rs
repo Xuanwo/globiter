@@ -45,7 +45,7 @@ impl<'a> Pattern<'a> {
                 '}' => match &mut state {
                     State::InSet(v) => {
                         let mut set = take(v);
-                        set.push((&s[i..j]).trim());
+                        set.push(s[i..j].trim());
                         pattern.tokens.push(Token::new_set(set));
                         (i, j, state) = (next_idx, next_idx, State::Plain);
                     }
@@ -73,7 +73,7 @@ impl<'a> Pattern<'a> {
                 ',' => match &mut state {
                     State::Plain => j = next_idx,
                     State::InSet(set) => {
-                        set.push((&s[i..j]).trim());
+                        set.push((s[i..j]).trim());
                         (i, j) = (next_idx, next_idx);
                     }
                     _ => bail!("unexpected character ',' at pos {}", idx),
@@ -89,7 +89,7 @@ impl<'a> Pattern<'a> {
             }
         }
         if j > i {
-            pattern.tokens.push(Token::Plain((&s[i..j]).trim()));
+            pattern.tokens.push(Token::Plain((s[i..j]).trim()));
         }
 
         Ok(pattern)
